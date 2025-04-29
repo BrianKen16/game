@@ -13,27 +13,18 @@
     <div id="gameInstructions">
       <h2>遊戲說明</h2>
       <ul>
-        <li>使用方向鍵 ← ↑ → ↓ 移動你的蛇。</li>
-        <li>吃到藍色方塊（食物）可以增加長度並得分。</li>
-        <li>吃到紫色方塊（特殊道具）會觸發隨機特殊效果：</li>
-        <ul>
-          <li>加速（速度提升）</li>
-          <li>減速（速度下降）</li>
-          <li>縮短自己（減少身體長度）</li>
-          <li>左右顛倒操作（反向控制）</li>
-          <li>消除所有電腦蛇</li>
-          <li>刪除自己尾端一節</li>
-        </ul>
-        <li>撞牆或撞到自己會死亡。</li>
-        <li>電腦蛇會隨機移動，無邊界穿越。</li>
-        <li>暫停遊戲請按「暫停」按鈕。</li>
-        <li>重新開始遊戲請按「重新開始」按鈕。</li>
+        <li>方向鍵控制：← ↑ → ↓</li>
+        <li>吃藍色方塊得分並變長</li>
+        <li>吃紫色方塊觸發隨機特殊效果（加速、減速、左右顛倒等）</li>
+        <li>撞牆或撞到自己會死亡</li>
+        <li>電腦蛇隨機移動且可穿牆</li>
       </ul>
     </div>
   </div>
 
   <div id="gameContainer" class="hidden">
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <canvas id="gameCanvas"></canvas>
+    <div id="effectDisplay" class="hidden"></div> <!-- 新增：顯示特殊效果 -->
     <div id="controls">
       <button id="pauseButton">暫停</button>
       <button id="restartButton">重新開始</button>
