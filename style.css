@@ -1,40 +1,33 @@
 body {
+  background-color: white;
   font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
   text-align: center;
 }
 
-#game {
-  background-color: #fff;
-  border: 1px solid #000;
-}
-
-button {
-  padding: 10px;
-  margin: 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-#game-container {
-  display: block;
+#start-screen, #game-container {
   margin-top: 20px;
 }
 
-#start-screen {
-  text-align: center;
+#gameCanvas {
+  background-color: #ffffff;
+  border: 2px solid black;
 }
 
-input {
-  padding: 5px;
-  font-size: 16px;
+.hidden {
+  display: none;
 }
 
-h1, h2, h3 {
-  color: #333;
+#controls {
+  margin-top: 10px;
 }
 
-ul {
-  list-style-type: none;
-  padding: 0;
+#leaderboard {
+  margin-top: 20px;
+}
+
+#event-message {
+  margin-top: 10px;
+  font-size: 18px;
+  color: red;
+  height: 24px;
 }
