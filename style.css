@@ -1,39 +1,42 @@
 body {
   background-color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  margin: 0;
   font-family: Arial, sans-serif;
-}
-
-#startScreen, #gameContainer, #countdown {
   text-align: center;
+  margin: 0;
+  padding: 0;
 }
 
 .hidden {
   display: none;
 }
 
-canvas {
-  border: 2px solid black;
-  background-color: white;
+#gameContainer {
+  margin-top: 20px;
+}
+
+#gameCanvas {
+  background-color: #f0f0f0;
+  border: 2px solid #000;
+}
+
+#controls {
+  margin-top: 10px;
 }
 
 #scoreBoard {
-  margin-top: 10px;
-  font-size: 20px;
+  margin-top: 20px;
 }
 
-button {
-  margin: 5px;
-  padding: 8px 16px;
-  font-size: 16px;
+#gameInstructions {
+  margin-top: 20px;
+  text-align: left;
+  display: inline-block;
+  max-width: 400px;
 }
 
-#countdown {
-  font-size: 60px;
-  font-weight: bold;
+#gameInstructions ul {
+  list-style-type: disc;
+  padding-left: 20px;
+  text-align: left;
 }
+
