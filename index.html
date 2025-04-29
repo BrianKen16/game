@@ -1,30 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>貪吃蛇遊戲 - 特殊事件版</title>
+  <title>貪吃蛇遊戲 Snake Game</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="start-screen">
+  <div id="startScreen">
     <h1>貪吃蛇遊戲</h1>
-    <input type="text" id="player-name" placeholder="請輸入你的名字">
-    <button id="start-btn">開始遊戲</button>
+    <input type="text" id="playerName" placeholder="輸入你的名字">
+    <button id="startButton">開始遊戲</button>
   </div>
-
-  <div id="game-container" class="hidden">
+  <div id="countdown" class="hidden">3</div>
+  <div id="gameContainer" class="hidden">
     <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <div id="controls">
-      <button id="pause-btn">暫停/繼續</button>
-      <button id="restart-btn">重新開始</button>
+    <div>
+      <button id="pauseButton">暫停</button>
+      <button id="restartButton">重新開始</button>
     </div>
-    <div id="event-message"></div>
-    <div id="leaderboard">
-      <h2>排行榜</h2>
-      <ul id="leaderboard-list"></ul>
-    </div>
+    <div id="scoreBoard"></div>
   </div>
-
   <script src="script.js"></script>
 </body>
 </html>
