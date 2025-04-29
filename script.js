@@ -1,106 +1,87 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const startScreen = document.getElementById('start-screen');
-const gameContainer = document.getElementById('game-container');
-const startBtn = document.getElementById('start-btn');
-const playerNameInput = document.getElementById('player-name');
-const pauseBtn = document.getElementById('pause-btn');
-const restartBtn = document.getElementById('restart-btn');
-const leaderboardList = document.getElementById('leaderboard-list');
-const eventMessage = document.getElementById('event-message');
+const startScreen = document.getElementById('startScreen');
+const startButton = document.getElementById('startButton');
+const restartButton = document.getElementById('restartButton');
+const pauseButton = document.getElementById('pauseButton');
+const gameContainer = document.getElementById('gameContainer');
+const playerNameInput = document.getElementById('playerName');
+const scoreBoard = document.getElementById('scoreBoard');
+const countdownDiv = document.getElementById('countdown');
 
-let gridSize = 20;
-let snake, foods, specialItems, computerSnakes;
-let dx, dy;
-let running = false;
-let paused = false;
-let speed = 150;
+const gridSize = 20;
+let snake, direction, food, running, playerName, paused;
+let computerSnakes = [];
 let score = 0;
-let playerName = '';
-let leaderboard = [];
-let specialEffects = {
-  speedUp: false,
-  slowDown: false,
-  invisible: false,
-  reversed: false,
-  invincible: false,
-};
-let effectTimers = {};
+let speed = 200;
+let specialItems = [];
+let reverseControl = false;
+let specialItemInterval;
+let countdownTimer;
 
-startBtn.addEventListener('click', startGame);
-pauseBtn.addEventListener('click', togglePause);
-restartBtn.addEventListener('click', restartGame);
-document.addEventListener('keydown', changeDirection);
-
-function startGame() {
+startButton.addEventListener('click', () => {
   playerName = playerNameInput.value.trim();
-  if (playerName === '') {
-    alert('請輸入名字！');
-    return;
+  if (playerName) {
+    startScreen.classList.add('hidden');
+    countdownDiv.classList.remove('hidden');
+    let count = 3;
+    countdownDiv.textContent = count;
+    countdownTimer = setInterval(() => {
+      count--;
+      if (count > 0) {
+        countdownDiv.textContent = count;
+      } else {
+        clearInterval(countdownTimer);
+        countdownDiv.classList.add('hidden');
+        gameContainer.classList.remove('hidden');
+        init();
+      }
+    }, 1000);
   }
-  startScreen.classList.add('hidden');
-  gameContainer.classList.remove('hidden');
-  init();
+});
+
+restartButton.addEventListener('click', restartGame);
+pauseButton.addEventListener('click', () => {
+  paused = !paused;
+});
+
+function restartGame() {
+  clearInterval(specialItemInterval);
+  clearInterval(countdownTimer);
+  startScreen.classList.remove('hidden');
+  gameContainer.classList.add('hidden');
+  countdownDiv.classList.add('hidden');
+  running = false;
 }
 
 function init() {
-  snake = [{ x: 10, y: 10 }];
-  dx = gridSize;
-  dy = 0;
-  foods = [];
-  specialItems = [];
-  computerSnakes = [
-    { body: [{ x: 5, y: 5 }], dx: gridSize, dy: 0 },
-    { body: [{ x: 15, y: 15 }], dx: 0, dy: gridSize },
-  ];
+  snake = [{x: 10, y: 10}];
+  direction = {x: 1, y: 0};
+  food = randomPosition();
+  computerSnakes = Array.from({length: 3}, () => ({
+    body: [randomPosition()],
+    direction: randomDirection()
+  }));
   score = 0;
-  speed = 150;
+  speed = 200;
+  specialItems = [];
+  reverseControl = false;
   running = true;
   paused = false;
-  generateFood(5);
+  specialItemInterval = setInterval(generateSpecialItem, 10000);
   update();
-  setInterval(generateSpecialItem, 30000);
 }
 
-function generateFood(count = 1) {
-  for (let i = 0; i < count; i++) {
-    foods.push({
-      x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
-      y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize
-    });
-  }
+function randomPosition() {
+  return {
+    x: Math.floor(Math.random() * (canvas.width / gridSize)),
+    y: Math.floor(Math.random() * (canvas.height / gridSize))
+  };
 }
 
-function generateSpecialItem() {
-  specialItems.push({
-    x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
-    y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize,
-    type: Math.floor(Math.random() * 7)
-  });
-}
-
-function changeDirection(e) {
-  if (specialEffects.reversed) {
-    if (e.key === 'ArrowLeft' && dx === 0) { dx = gridSize; dy = 0; }
-    else if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = gridSize; }
-    else if (e.key === 'ArrowRight' && dx === 0) { dx = -gridSize; dy = 0; }
-    else if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = -gridSize; }
-  } else {
-    if (e.key === 'ArrowLeft' && dx === 0) { dx = -gridSize; dy = 0; }
-    else if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -gridSize; }
-    else if (e.key === 'ArrowRight' && dx === 0) { dx = gridSize; dy = 0; }
-    else if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = gridSize; }
-  }
-}
-
-function togglePause() {
-  paused = !paused;
-}
-
-function restartGame() {
-  clearInterval();
-  startScreen.classList.remove('hidden');
-  gameContainer.classList.add('hidden');
+function randomDirection() {
+  const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+  return dirs[Math.floor(Math.random() * dirs.length)];
 }
 
 function update() {
@@ -109,121 +90,143 @@ function update() {
     setTimeout(update, speed);
     return;
   }
-  moveSnake();
-  moveComputerSnakes();
+
+  moveSnake(snake, direction, false);
+
+  for (let compSnake of computerSnakes) {
+    if (Math.random() < 0.1) {
+      compSnake.direction = randomDirection();
+    }
+    moveSnake(compSnake.body, compSnake.direction, true);
+  }
+
   checkCollision();
   draw();
   setTimeout(update, speed);
 }
 
-function moveSnake() {
-  const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-  snake.unshift(head);
+function moveSnake(snakeBody, moveDirection, isComputer) {
+  const head = {...snakeBody[0]};
+  head.x += moveDirection.x;
+  head.y += moveDirection.y;
 
-  if (!eatFood()) snake.pop();
+  if (isComputer) {
+    // 電腦蛇可以穿牆
+    if (head.x < 0) head.x = canvas.width / gridSize - 1;
+    if (head.x >= canvas.width / gridSize) head.x = 0;
+    if (head.y < 0) head.y = canvas.height / gridSize - 1;
+    if (head.y >= canvas.height / gridSize) head.y = 0;
+  } else {
+    // 玩家撞牆就死
+    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize) {
+      running = false;
+      alert('遊戲結束！分數：' + score);
+      return;
+    }
+  }
+
+  snakeBody.unshift(head);
+
+  if (!eatFood(snakeBody)) {
+    snakeBody.pop();
+  }
 }
 
-function moveComputerSnakes() {
-  computerSnakes.forEach(compSnake => {
-    if (Math.random() < 0.2) {
-      const dirs = [
-        { dx: gridSize, dy: 0 }, { dx: -gridSize, dy: 0 },
-        { dx: 0, dy: gridSize }, { dx: 0, dy: -gridSize }
-      ];
-      const newDir = dirs[Math.floor(Math.random() * dirs.length)];
-      compSnake.dx = newDir.dx;
-      compSnake.dy = newDir.dy;
-    }
-    const head = { x: (compSnake.body[0].x + compSnake.dx + canvas.width) % canvas.width,
-                   y: (compSnake.body[0].y + compSnake.dy + canvas.height) % canvas.height };
-    compSnake.body.unshift(head);
-
-    if (!eatFood(compSnake)) compSnake.body.pop();
-    else if (Math.random() < 0.1) {  // 電腦蛇隨時間成長
-      compSnake.body.push({ ...compSnake.body[compSnake.body.length-1] });
-    }
-  });
-}
-
-function eatFood(s = snake) {
-  for (let i = 0; i < foods.length; i++) {
-    if (s[0].x === foods[i].x && s[0].y === foods[i].y) {
-      foods.splice(i, 1);
-      if (s === snake) {
-        score++;
-        if (score % 5 === 0 && speed > 50) speed -= 5;
-        generateFood();
-      }
+function eatFood(snakeBody) {
+  if (snakeBody[0].x === food.x && snakeBody[0].y === food.y) {
+    score++;
+    food = randomPosition();
+    speed = Math.max(50, speed - 5);
+    return true;
+  }
+  for (let i = 0; i < specialItems.length; i++) {
+    if (snakeBody[0].x === specialItems[i].x && snakeBody[0].y === specialItems[i].y) {
+      triggerSpecialItem(specialItems[i].type);
+      specialItems.splice(i, 1);
       return true;
     }
   }
   return false;
 }
 
+function triggerSpecialItem(type) {
+  switch(type) {
+    case 0: speed = Math.max(30, speed - 20); break; // 加速
+    case 1: speed += 20; break; // 減速
+    case 2: score += 5; break; // 加分
+    case 3: score = Math.max(0, score - 5); break; // 扣分
+    case 4: specialItems = []; break; // 清除道具
+    case 5: reverseControl = true; setTimeout(() => reverseControl = false, 10000); break; // 顛倒方向
+    case 6: snake.push({x: snake[snake.length-1].x, y: snake[snake.length-1].y}); break; // 增加長度
+  }
+}
+
+function generateSpecialItem() {
+  specialItems.push({
+    x: Math.floor(Math.random() * (canvas.width / gridSize)),
+    y: Math.floor(Math.random() * (canvas.height / gridSize)),
+    type: Math.floor(Math.random() * 7)
+  });
+}
+
 function checkCollision() {
-  if (!specialEffects.invincible) {
-    if (snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height) {
-      endGame();
-    }
-    for (let i = 1; i < snake.length; i++) {
-      if (snake[0].x === snake[i].x && snake[0].y === snake[i].y) {
-        endGame();
-      }
+  const head = snake[0];
+  for (let i = 1; i < snake.length; i++) {
+    if (head.x === snake[i].x && head.y === snake[i].y) {
+      running = false;
+      alert('自己撞自己！分數：' + score);
+      return;
     }
   }
-
-  specialItems.forEach((item, index) => {
-    if (snake[0].x === item.x && snake[0].y === item.y) {
-      triggerSpecial(item.type);
-      specialItems.splice(index, 1);
-    }
-  });
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = specialEffects.invisible ? '#ffffff' : '#000000';
-  snake.forEach(segment => {
-    ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+
+  // 畫玩家
+  ctx.fillStyle = 'green';
+  snake.forEach(part => {
+    ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
   });
+
+  // 畫食物
   ctx.fillStyle = 'red';
-  foods.forEach(f => {
-    ctx.fillRect(f.x, f.y, gridSize, gridSize);
-  });
-  computerSnakes.forEach(compSnake => {
-    ctx.fillStyle = 'blue';
-    compSnake.body.forEach(segment => {
-      ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+  ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+  // 畫電腦蛇
+  ctx.fillStyle = 'blue';
+  computerSnakes.forEach(snake => {
+    snake.body.forEach(part => {
+      ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
     });
+    if (Math.random() < 0.02) {
+      snake.body.push({...snake.body[snake.body.length-1]}); // 電腦蛇隨機增長
+    }
   });
+
+  // 畫特殊道具
   specialItems.forEach(item => {
-    ctx.fillStyle = ['purple', 'cyan', 'orange', 'pink', 'green', 'yellow', 'brown'][item.type];
-    ctx.fillRect(item.x, item.y, gridSize, gridSize);
+    const colors = ['purple', 'cyan', 'orange', 'pink', 'lime', 'yellow', 'brown'];
+    ctx.fillStyle = colors[item.type] || 'black';
+    ctx.fillRect(item.x * gridSize, item.y * gridSize, gridSize, gridSize);
   });
+
+  // 更新分數
+  scoreBoard.innerText = `${playerName} 的分數：${score}`;
 }
 
-function triggerSpecial(type) {
-  clearTimeout(effectTimers[type]);
-  switch (type) {
-    case 0: specialEffects.speedUp = true; speed = Math.max(30, speed - 50); eventMessage.textContent = '加速中！'; break;
-    case 1: specialEffects.slowDown = true; speed += 50; eventMessage.textContent = '減速中！'; break;
-    case 2: generateFood(5); eventMessage.textContent = '大量食物出現！'; break;
-    case 3: specialEffects.invisible = true; eventMessage.textContent = '蛇透明了！'; break;
-    case 4: score += 10; eventMessage.textContent = '超級大食物！'; break;
-    case 5: specialEffects.invincible = true; eventMessage.textContent = '無敵模式！'; break;
-    case 6: specialEffects.reversed = true; eventMessage.textContent = '方向顛倒！'; break;
+document.addEventListener('keydown', changeDirection);
+
+function changeDirection(e) {
+  if (reverseControl) {
+    if (e.key === 'ArrowLeft') direction = {x:1, y:0};
+    else if (e.key === 'ArrowRight') direction = {x:-1, y:0};
+    else if (e.key === 'ArrowUp') direction = {x:0, y:1};
+    else if (e.key === 'ArrowDown') direction = {x:0, y:-1};
+  } else {
+    if (e.key === 'ArrowLeft') direction = {x:-1, y:0};
+    else if (e.key === 'ArrowRight') direction = {x:1, y:0};
+    else if (e.key === 'ArrowUp') direction = {x:0, y:-1};
+    else if (e.key === 'ArrowDown') direction = {x:0, y:1};
   }
-  effectTimers[type] = setTimeout(() => {
-    specialEffects = { ...specialEffects, speedUp: false, slowDown: false, invisible: false, reversed: false, invincible: false };
-    eventMessage.textContent = '';
-  }, 5000);
-}
-
-function endGame() {
-  running = false;
-  leaderboard.push({ name: playerName, score: score });
-  leaderboard.sort((a, b) => b.score - a.score);
-  leaderboardList.innerHTML = leaderboard.map(p => `<li>${p.name}: ${p.score}</li>`).join('');
-  alert('遊戲結束！你的分數：' + score);
-  restartGame();
 }
