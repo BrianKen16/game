@@ -1,73 +1,96 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const box = 20;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startScreen = document.getElementById('start-screen');
+const gameContainer = document.getElementById('game-container');
+const startBtn = document.getElementById('start-btn');
+const playerNameInput = document.getElementById('player-name');
+const pauseBtn = document.getElementById('pause-btn');
+const restartBtn = document.getElementById('restart-btn');
+const leaderboardList = document.getElementById('leaderboard-list');
+const eventMessage = document.getElementById('event-message');
 
-let snake = [{ x: 9 * box, y: 10 * box }];
-let direction = "";
-let foods = [];
-let speed = 200;
-let interval;
-let playerName = "";
-let scores = [];
+let gridSize = 20;
+let snake, foods, specialItems, computerSnakes;
+let dx, dy;
+let running = false;
 let paused = false;
+let speed = 150;
+let score = 0;
+let playerName = '';
+let leaderboard = [];
+let specialEffects = {
+  speedUp: false,
+  slowDown: false,
+  invisible: false,
+  reversed: false,
+  invincible: false,
+};
+let effectTimers = {};
 
-// 多個電腦蛇
-let computerSnakes = [];
-const computerCount = 3; // 電腦蛇數量
-
-document.getElementById("start-btn").onclick = startGame;
-document.getElementById("pause-btn").onclick = togglePause;
-document.getElementById("restart-btn").onclick = restartGame;
-document.addEventListener("keydown", move);
+startBtn.addEventListener('click', startGame);
+pauseBtn.addEventListener('click', togglePause);
+restartBtn.addEventListener('click', restartGame);
+document.addEventListener('keydown', changeDirection);
 
 function startGame() {
-  playerName = document.getElementById("player-name").value || "玩家";
-  document.getElementById("start-screen").style.display = "none";
-  document.getElementById("game-container").style.display = "block";
-
-  reset();
-  spawnFood();
-  spawnComputerSnakes();
-  interval = setInterval(update, speed);
+  playerName = playerNameInput.value.trim();
+  if (playerName === '') {
+    alert('請輸入名字！');
+    return;
+  }
+  startScreen.classList.add('hidden');
+  gameContainer.classList.remove('hidden');
+  init();
 }
 
-function reset() {
-  snake = [{ x: 9 * box, y: 10 * box }];
-  direction = "";
+function init() {
+  snake = [{ x: 10, y: 10 }];
+  dx = gridSize;
+  dy = 0;
   foods = [];
-  computerSnakes = [];
-  speed = 200;
+  specialItems = [];
+  computerSnakes = [
+    { body: [{ x: 5, y: 5 }], dx: gridSize, dy: 0 },
+    { body: [{ x: 15, y: 15 }], dx: 0, dy: gridSize },
+  ];
+  score = 0;
+  speed = 150;
+  running = true;
   paused = false;
+  generateFood(5);
+  update();
+  setInterval(generateSpecialItem, 30000);
 }
 
-function spawnFood() {
-  foods = [];
-  for (let i = 0; i < 5; i++) {
+function generateFood(count = 1) {
+  for (let i = 0; i < count; i++) {
     foods.push({
-      x: Math.floor(Math.random() * (canvas.width / box)) * box,
-      y: Math.floor(Math.random() * (canvas.height / box)) * box
+      x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
+      y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize
     });
   }
 }
 
-function spawnComputerSnakes() {
-  for (let i = 0; i < computerCount; i++) {
-    computerSnakes.push({
-      body: [{ 
-        x: Math.floor(Math.random() * (canvas.width / box)) * box,
-        y: Math.floor(Math.random() * (canvas.height / box)) * box 
-      }],
-      direction: ["LEFT", "RIGHT", "UP", "DOWN"][Math.floor(Math.random() * 4)],
-      lastMoveTime: Date.now(),
-    });
-  }
+function generateSpecialItem() {
+  specialItems.push({
+    x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
+    y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize,
+    type: Math.floor(Math.random() * 7)
+  });
 }
 
-function move(event) {
-  if (event.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
-  else if (event.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
-  else if (event.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
-  else if (event.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+function changeDirection(e) {
+  if (specialEffects.reversed) {
+    if (e.key === 'ArrowLeft' && dx === 0) { dx = gridSize; dy = 0; }
+    else if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = gridSize; }
+    else if (e.key === 'ArrowRight' && dx === 0) { dx = -gridSize; dy = 0; }
+    else if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = -gridSize; }
+  } else {
+    if (e.key === 'ArrowLeft' && dx === 0) { dx = -gridSize; dy = 0; }
+    else if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -gridSize; }
+    else if (e.key === 'ArrowRight' && dx === 0) { dx = gridSize; dy = 0; }
+    else if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = gridSize; }
+  }
 }
 
 function togglePause() {
@@ -75,153 +98,132 @@ function togglePause() {
 }
 
 function restartGame() {
-  clearInterval(interval);
-  startGame();
-}
-
-function drawSnake(snakeBody, color) {
-  ctx.fillStyle = color;
-  for (let part of snakeBody) {
-    ctx.fillRect(part.x, part.y, box, box);
-  }
-}
-
-function drawFood() {
-  for (let f of foods) {
-    ctx.fillStyle = "#f00";
-    ctx.fillRect(f.x, f.y, box, box);
-  }
+  clearInterval();
+  startScreen.classList.remove('hidden');
+  gameContainer.classList.add('hidden');
 }
 
 function update() {
-  if (paused) return;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+  if (!running) return;
+  if (paused) {
+    setTimeout(update, speed);
+    return;
+  }
   moveSnake();
   moveComputerSnakes();
-  
-  drawFood();
-  drawSnake(snake, "#000");
-  
-  for (let cSnake of computerSnakes) {
-    drawSnake(cSnake.body, "#00f");
-  }
+  checkCollision();
+  draw();
+  setTimeout(update, speed);
 }
 
 function moveSnake() {
-  if (!direction) return;
-
-  let head = { x: snake[0].x, y: snake[0].y };
-  if (direction === "LEFT") head.x -= box;
-  if (direction === "UP") head.y -= box;
-  if (direction === "RIGHT") head.x += box;
-  if (direction === "DOWN") head.y += box;
-
-  // 撞牆死
-  if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-    gameOver();
-    return;
-  }
-
-  // 撞到自己死
-  for (let part of snake) {
-    if (head.x === part.x && head.y === part.y) {
-      gameOver();
-      return;
-    }
-  }
-
-  // 吃食物
-  let ateFood = false;
-  for (let i = 0; i < foods.length; i++) {
-    if (head.x === foods[i].x && head.y === foods[i].y) {
-      foods.splice(i, 1);
-      ateFood = true;
-      updateSpeed();
-      break;
-    }
-  }
-  if (!ateFood) {
-    snake.pop();
-  }
-
-  if (foods.length === 0) {
-    spawnFood();
-  }
-
+  const head = { x: snake[0].x + dx, y: snake[0].y + dy };
   snake.unshift(head);
+
+  if (!eatFood()) snake.pop();
 }
 
 function moveComputerSnakes() {
-  for (let cSnake of computerSnakes) {
-    let head = { x: cSnake.body[0].x, y: cSnake.body[0].y };
-
-    // 每 0.5 秒隨機換方向
-    if (Date.now() - cSnake.lastMoveTime > 500) {
-      const availableDirections = ["LEFT", "RIGHT", "UP", "DOWN"];
-      if (cSnake.direction === "LEFT") availableDirections.splice(availableDirections.indexOf("RIGHT"), 1);
-      if (cSnake.direction === "RIGHT") availableDirections.splice(availableDirections.indexOf("LEFT"), 1);
-      if (cSnake.direction === "UP") availableDirections.splice(availableDirections.indexOf("DOWN"), 1);
-      if (cSnake.direction === "DOWN") availableDirections.splice(availableDirections.indexOf("UP"), 1);
-      
-      cSnake.direction = availableDirections[Math.floor(Math.random() * availableDirections.length)];
-      cSnake.lastMoveTime = Date.now();
+  computerSnakes.forEach(compSnake => {
+    if (Math.random() < 0.2) {
+      const dirs = [
+        { dx: gridSize, dy: 0 }, { dx: -gridSize, dy: 0 },
+        { dx: 0, dy: gridSize }, { dx: 0, dy: -gridSize }
+      ];
+      const newDir = dirs[Math.floor(Math.random() * dirs.length)];
+      compSnake.dx = newDir.dx;
+      compSnake.dy = newDir.dy;
     }
+    const head = { x: (compSnake.body[0].x + compSnake.dx + canvas.width) % canvas.width,
+                   y: (compSnake.body[0].y + compSnake.dy + canvas.height) % canvas.height };
+    compSnake.body.unshift(head);
 
-    // 移動電腦蛇
-    if (cSnake.direction === "LEFT") head.x -= box;
-    if (cSnake.direction === "UP") head.y -= box;
-    if (cSnake.direction === "RIGHT") head.x += box;
-    if (cSnake.direction === "DOWN") head.y += box;
+    if (!eatFood(compSnake)) compSnake.body.pop();
+    else if (Math.random() < 0.1) {  // 電腦蛇隨時間成長
+      compSnake.body.push({ ...compSnake.body[compSnake.body.length-1] });
+    }
+  });
+}
 
-    // 電腦蛇穿牆邏輯
-    if (head.x < 0) head.x = canvas.width - box;
-    if (head.x >= canvas.width) head.x = 0;
-    if (head.y < 0) head.y = canvas.height - box;
-    if (head.y >= canvas.height) head.y = 0;
+function eatFood(s = snake) {
+  for (let i = 0; i < foods.length; i++) {
+    if (s[0].x === foods[i].x && s[0].y === foods[i].y) {
+      foods.splice(i, 1);
+      if (s === snake) {
+        score++;
+        if (score % 5 === 0 && speed > 50) speed -= 5;
+        generateFood();
+      }
+      return true;
+    }
+  }
+  return false;
+}
 
-    // 吃食物
-    let ateFood = false;
-    for (let i = 0; i < foods.length; i++) {
-      if (head.x === foods[i].x && head.y === foods[i].y) {
-        foods.splice(i, 1);
-        ateFood = true;
-        cSnake.body.push({ x: cSnake.body[cSnake.body.length - 1].x, y: cSnake.body[cSnake.body.length - 1].y }); // 增長蛇身
-        break;
+function checkCollision() {
+  if (!specialEffects.invincible) {
+    if (snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height) {
+      endGame();
+    }
+    for (let i = 1; i < snake.length; i++) {
+      if (snake[0].x === snake[i].x && snake[0].y === snake[i].y) {
+        endGame();
       }
     }
+  }
 
-    if (!ateFood) {
-      cSnake.body.pop();
+  specialItems.forEach((item, index) => {
+    if (snake[0].x === item.x && snake[0].y === item.y) {
+      triggerSpecial(item.type);
+      specialItems.splice(index, 1);
     }
-
-    cSnake.body.unshift(head);
-  }
+  });
 }
 
-function updateSpeed() {
-  if (speed > 50) {
-    speed -= 10;
-    clearInterval(interval);
-    interval = setInterval(update, speed);
-  }
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = specialEffects.invisible ? '#ffffff' : '#000000';
+  snake.forEach(segment => {
+    ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+  });
+  ctx.fillStyle = 'red';
+  foods.forEach(f => {
+    ctx.fillRect(f.x, f.y, gridSize, gridSize);
+  });
+  computerSnakes.forEach(compSnake => {
+    ctx.fillStyle = 'blue';
+    compSnake.body.forEach(segment => {
+      ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+    });
+  });
+  specialItems.forEach(item => {
+    ctx.fillStyle = ['purple', 'cyan', 'orange', 'pink', 'green', 'yellow', 'brown'][item.type];
+    ctx.fillRect(item.x, item.y, gridSize, gridSize);
+  });
 }
 
-function gameOver() {
-  clearInterval(interval);
-  alert(playerName + " 遊戲結束！分數：" + snake.length);
-  scores.push({ name: playerName, score: snake.length });
-  updateRanking();
+function triggerSpecial(type) {
+  clearTimeout(effectTimers[type]);
+  switch (type) {
+    case 0: specialEffects.speedUp = true; speed = Math.max(30, speed - 50); eventMessage.textContent = '加速中！'; break;
+    case 1: specialEffects.slowDown = true; speed += 50; eventMessage.textContent = '減速中！'; break;
+    case 2: generateFood(5); eventMessage.textContent = '大量食物出現！'; break;
+    case 3: specialEffects.invisible = true; eventMessage.textContent = '蛇透明了！'; break;
+    case 4: score += 10; eventMessage.textContent = '超級大食物！'; break;
+    case 5: specialEffects.invincible = true; eventMessage.textContent = '無敵模式！'; break;
+    case 6: specialEffects.reversed = true; eventMessage.textContent = '方向顛倒！'; break;
+  }
+  effectTimers[type] = setTimeout(() => {
+    specialEffects = { ...specialEffects, speedUp: false, slowDown: false, invisible: false, reversed: false, invincible: false };
+    eventMessage.textContent = '';
+  }, 5000);
 }
 
-function updateRanking() {
-  const ranking = document.getElementById("ranking");
-  ranking.innerHTML = "";
-  scores.sort((a, b) => b.score - a.score);
-  for (let player of scores) {
-    const li = document.createElement("li");
-    li.textContent = `${player.name}: ${player.score}`;
-    ranking.appendChild(li);
-  }
+function endGame() {
+  running = false;
+  leaderboard.push({ name: playerName, score: score });
+  leaderboard.sort((a, b) => b.score - a.score);
+  leaderboardList.innerHTML = leaderboard.map(p => `<li>${p.name}: ${p.score}</li>`).join('');
+  alert('遊戲結束！你的分數：' + score);
+  restartGame();
 }
